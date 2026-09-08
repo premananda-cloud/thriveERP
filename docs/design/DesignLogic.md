@@ -10,7 +10,7 @@ and coordination with their costumer.
 Software which are open and free to use are  blocked by complexity or domain gap.
 
 To be precise 
-*  Doctor won't go hire a software dev to make an app for their hiring, but they will use existing app.
+*  Doctor won't go hire a software dev to make an app for their appointment, but they will use existing app.
 *  Barber wont do it either, but they will use exixting app X.
 Similar with other services, this is is the same issue and gap we identified.
 
