@@ -1,0 +1,2 @@
+the software name can be changed but "ThriveERP" is kept .
+contributor keep it so we can change easily later on
