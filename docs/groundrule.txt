@@ -1,2 +1,61 @@
-the software name can be changed but "ThriveERP" is kept .
-contributor keep it so we can change easily later on
+thriveERP — Ground Rules (Draft)
+=================================
+Status: Draft — expand/edit as the team grows or conventions get decided.
+
+1. GUIDING PRINCIPLE
+---------------------
+KISS. Build for what we need now. The pluggable/hexagonal structure exists so
+we CAN swap pieces later — it is not permission to build every piece now.
+If a decision doesn't need to be made this sprint, write it down as deferred
+(see DesignLogic.md / ARCHITECTURE.md) and move on.
+
+2. MODULE BOUNDARIES
+---------------------
+- core-domain must never import a framework (no Spring, no JPA annotations,
+  no Jackson). Pure Java only.
+- core-app talks to ports (interfaces), never to a concrete adapter class.
+- Adapters (persistence, rest, erp-impl, audit) never talk to each other
+  directly — everything flows through core-app / core-domain.
+- If you're tempted to import adapter-persistence from adapter-erp-impl,
+  stop — that's a sign the interaction belongs in core-domain instead.
+
+3. GIT / BRANCHING
+-------------------
+(fill in once decided — suggested starting point below, edit freely)
+- main = always deployable
+- feature branches off main: feature/<short-description>
+- PRs required before merging to main
+- Commit messages: short imperative summary line, body if needed
+
+4. CODE STYLE
+--------------
+- Java: (decide — Google Java Format? standard Spring conventions?)
+- Package root: com.thriveerp.thriveERP
+- One class per file, package-by-feature inside each module where practical
+
+5. TESTING
+-----------
+- core-domain: unit tests, no Spring context needed — this is the easiest
+  code in the project to test well, so do it.
+- adapter-erp-mock is the default profile for local dev and CI — tests
+  should never require a live iDempiere instance.
+- (decide: minimum coverage expectation, if any)
+
+6. DOCS
+--------
+- ARCHITECTURE.md = where things live and why (structure)
+- DesignLogic.md = what the business rules actually are (behavior)
+- tech_version.md = exact versions/tooling in use
+- groundrule.txt (this file) = how we work
+- Keep "open questions" sections honest instead of guessing and forgetting
+  to revisit.
+
+7. DECISIONS DEFERRED (repo-wide)
+-----------------------------------
+- CI/CD pipeline
+- Environments (dev/staging/prod) and how config differs between them
+- Secrets management (currently plaintext in docker-compose — NOT for
+  anything beyond local dev)
+- Logging/observability stack
+
+-- End of draft. Replace this note once the above sections have real answers. --
