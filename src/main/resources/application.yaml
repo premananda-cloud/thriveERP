@@ -1,3 +1,26 @@
 spring:
   application:
     name: thriveERP
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:appointment_db}
+    username: ${DB_USER:app_user}
+    password: ${DB_PASSWORD:secure_pass}
+
+  jpa:
+    hibernate:
+      # Flyway owns the schema (see db/migration). Hibernate must never
+      # auto-generate or alter it — validate only checks the entities match.
+      ddl-auto: validate
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+app:
+  jwt:
+    # No default on purpose — JwtTokenService fails fast at startup if this
+    # is blank. Set JWT_SECRET in your environment (see .env.example).
+    secret: ${JWT_SECRET:}
+    expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}

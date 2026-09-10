@@ -143,6 +143,8 @@ Start with **one Spring Boot fat JAR** containing all modules, running in **one 
 
 Splitting the ERP adapter into its own container/sidecar is a later step, once the ERP integration is heavy enough or needs its own lifecycle — the pluggable interface means that split won't touch core code.
 
+**Production direction (draft — see DesignLogic.md §4.1 for full detail):** iDempiere itself is the data backend here, not a generic downstream ERP. The production plan is a **trimmed iDempiere build**, packaged **together with the thriveERP app** into one Docker image/compose stack per deployment, with **per-enterprise customization done via git branches** off a shared base branch (see `groundrule.txt` §3). This is a later-stage concern, not blocking Sprint 0 — but it does mean `adapter-erp-impl` should be built assuming a real (if trimmed) iDempiere instance on the other end, not an abstract placeholder ERP.
+
 **Draft `docker-compose.yml`:**
 ```yaml
 version: '3.8'

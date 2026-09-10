@@ -34,11 +34,19 @@
 |---|---|---|
 | Flyway (or Liquibase) | TBD | pick one — ARCHITECTURE.md assumes Flyway |
 
-## ERP Target
+## ERP / Data Backend
 
 | Component | Version | Notes |
 |---|---|---|
-| iDempiere | 2026-Sept-8 build (per `idempiere/repository_zips/idempiere-2026-Spt-8.zip`) | Integration method (REST/SOAP/DB) TBD — see DesignLogic.md §4 |
+| iDempiere | 2026-Sept-8 build (per `idempiere/repository_zips/idempiere-2026-Spt-8.zip`) | This is the **data backend**, not a downstream sync target — see DesignLogic.md §4. Pinned as a local zip snapshot instead of a live git clone, since the full repo is large. Integration method (REST/SOAP/DB) still TBD. |
+
+**Zip-in-repo note:** committing a full iDempiere source zip straight into git will bloat repo history fast (every future update = another copy in history). Worth deciding early:
+- keep the zip out of git entirely (`.gitignore` it, document the download source/version instead), **or**
+- use Git LFS / a release-artifact store for it, **or**
+- vendor only the trimmed/built output once the trimming step exists, not the raw upstream zip.
+*(TBD — flagged here so it doesn't get decided by accident once the zip is already committed.)*
+
+**Trimmed build:** production plan is to strip iDempiere down to only the modules needed, then bundle that trimmed build with the thriveERP app in one Docker image per deployment. See DesignLogic.md §4.1 for the branch-per-enterprise customization plan.
 
 ## Testing
 

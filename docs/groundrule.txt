@@ -22,10 +22,26 @@ If a decision doesn't need to be made this sprint, write it down as deferred
 3. GIT / BRANCHING
 -------------------
 (fill in once decided — suggested starting point below, edit freely)
-- main = always deployable
-- feature branches off main: feature/<short-description>
-- PRs required before merging to main
-- Commit messages: short imperative summary line, body if needed
+
+Two layers to this, since we're planning per-enterprise customization
+(see DesignLogic.md 4.1):
+
+  a) Day-to-day development on the base template:
+     - main = always-deployable base template (generic thriveERP +
+       trimmed iDempiere)
+     - feature branches off main: feature/<short-description>
+     - PRs required before merging to main
+     - Commit messages: short imperative summary line, body if needed
+
+  b) Per-enterprise customization:
+     - client/<client-name> branches off main, for that client's
+       deployment-specific changes
+     - Non-client-specific fixes made on a client branch should be
+       cherry-picked / merged back to main so all clients benefit
+     - Decide early (see DesignLogic.md open questions) whether client
+       branches should stay config-only or if code/schema divergence
+       is expected — that determines how painful merge-back gets over
+       time. Revisit once 2-3 client branches actually exist.
 
 4. CODE STYLE
 --------------

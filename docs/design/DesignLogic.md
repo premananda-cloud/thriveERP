@@ -53,12 +53,19 @@ Rules:
 
 ---
 
-## 4. ERP Sync Rules (iDempiere)
+## 4. ERP / Data Backend (iDempiere)
 
-- We're targeting **iDempiere** as the local ERP (see `/idempiere/repository_zips`).
-- `adapter-erp-impl` is responsible for translating a confirmed appointment + payment into whatever iDempiere expects (likely a Sales Order / Invoice via iDempiere's REST or SOAP webservices, or direct DB writes if going the DB-adapter route — **to be decided** once we've looked at what iDempiere exposes).
-- Sync direction: **push only** for now (thriveERP → iDempiere) unless we find we need availability/resource data pulled *from* iDempiere.
-- *(Open question: does iDempiere own the "service" catalog / pricing, or does thriveERP? This decides which system is the source of truth and needs to be settled before building `adapter-erp-impl`.)*
+- **iDempiere is the data backend**, not just a downstream system we notify. The plan is to run iDempiere itself (trimmed) and have thriveERP's appointment engine sit in front of / alongside it, reading and writing through `adapter-erp-impl`.
+- Source repo is kept as a **local zip snapshot** (`idempiere/repository_zips/idempiere-2026-Spt-8.zip`) rather than a live clone, since the full iDempiere repo is large and slow to pull. Treat the zip as the pinned baseline version we build from — see `tech_version.md` for how it's tracked.
+- `adapter-erp-impl` still implements `EngineConnectorPort`, but its job is broader than "push an invoice": it's the boundary between our domain model and however iDempiere's schema/services actually work. Integration method (REST/SOAP webservices vs. direct DB access against iDempiere's Postgres schema) is still **TBD** and should get decided once the trimmed build is running and we can see what it exposes.
+- *(Open question: does iDempiere own the "service" catalog / pricing, or does thriveERP? Since iDempiere is now the data backend rather than a satellite system, the default assumption should probably flip — iDempiere as source of truth, thriveERP as the appointment-specific layer on top. Confirm before building `adapter-erp-impl`.)*
+
+### 4.1 Production packaging plan (draft)
+
+- Build a **trimmed iDempiere distribution** — strip it down to the modules/plugins actually needed for this use case, rather than shipping the full stock build.
+- Package the trimmed iDempiere build **together with the thriveERP application** into a single Docker image/compose stack for a given deployment, rather than treating them as two independently-versioned products.
+- **Per-enterprise customization via branches**: a base branch holds the generic trimmed-iDempiere + thriveERP template; each client/enterprise gets its own branch off that base for their specific customizations (data model tweaks, plugin selection, branding, etc). Common fixes get merged back from a client branch to base when they're not client-specific.
+- *(Open question: how much diverges per client — just config, or actual code/schema changes? That determines whether branch-per-client is sustainable long-term or whether we eventually need a plugin/config-driven customization model instead of branching. Worth revisiting once 2–3 client branches exist.)*
 
 ---
 
@@ -78,6 +85,8 @@ Keep this section honest — it's more useful than pretending we've solved every
 - What "resource" means for double-booking checks
 - iDempiere integration method (webservice vs. DB-level)
 - Business hours / availability rules
+- Source of truth for service catalog/pricing (iDempiere vs. thriveERP)
+- What's allowed to diverge per client branch (config-only vs. code/schema)
 
 ---
 
