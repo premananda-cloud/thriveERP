@@ -99,9 +99,27 @@
 			<scope>test</scope>
 		</dependency>
 
+		<!-- Spring Boot 4 split @WebMvcTest / @AutoConfigureMockMvc out of
+		     spring-boot-test-autoconfigure into their own starter. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webmvc-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- In-memory DB for ThriveErpApplicationTests (the full-context smoke
+		     test) only — everything else is mocked/unit-tested and needs no
+		     database. Flyway bundles H2 support directly in flyway-core, so
+		     no extra flyway-database-* module is needed for this one. -->
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

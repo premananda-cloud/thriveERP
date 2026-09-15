@@ -1,0 +1,28 @@
+# Overrides src/main/resources/application.yaml for tests only.
+# ThriveErpApplicationTests boots the FULL context, so it needs *some*
+# datasource and a valid JWT secret — this gives it H2 (in Postgres
+# compatibility mode, so V1__create_users_table.sql runs unmodified)
+# instead of requiring a live Postgres instance and real env vars just
+# to run `mvn test`. Slice tests (@WebMvcTest etc.) don't load this far
+# and are unaffected.
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:thriveerp-test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+app:
+  jwt:
+    secret: test-only-secret-value-32-bytes-minimum!
+    expiration-seconds: 3600
