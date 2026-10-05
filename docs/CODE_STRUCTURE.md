@@ -13,7 +13,7 @@
 | Date | Change | Detail |
 |---|---|---|
 | 2026-09-10 | Auth slice added | User registration, login (JWT), role management. First real feature built on top of the Sprint-0 skeleton. See §3.1. |
-| 2026-09-09 | Project scaffolded | Single Spring Boot module (`com.thriveerp.thriveERP`), no business logic yet. Matches ARCHITECTURE.md §9 Sprint 0 item 1. |
+| 2026-09-09 | Project scaffolded | Single Spring Boot module (`com.thriveerp`), no business logic yet. Matches ARCHITECTURE.md §9 Sprint 0 item 1. |
 
 ---
 

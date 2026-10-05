@@ -76,7 +76,7 @@ Nothing here talks to Spring's `ApplicationContext`. These are confirmed passing
 ```
 @SpringBootTest(classes = ThriveErpApplication.class)  (implicit, via @SpringBootApplication scan)
   → boots the ENTIRE application context:
-      - every @Component/@Service/@Repository under com.thriveerp.thriveERP
+      - every @Component/@Service/@Repository under com.thriveerp
       - full autoconfiguration (not a curated subset like @WebMvcTest)
       - real DataSource bean → attempts an actual JDBC connection
       - Flyway bean → runs migrations against that DataSource at startup
@@ -131,7 +131,7 @@ Symptom would be `PSQLException: Connection refused` or similar. This would actu
 
 ## 4. What to send back to keep this moving
 
-The fastest path to an actual fix, instead of another guess-and-patch cycle: run `mvn test`, then open `target/surefire-reports/com.thriveerp.thriveERP.ThriveErpApplicationTests.txt` directly (not the console output — the `.txt` report has the full, untruncated stack trace) and paste **from the first `Caused by:` onward**. That one block of text will most likely point straight at H1, H2, or H3 above rather than needing more hypothesis-generation.
+The fastest path to an actual fix, instead of another guess-and-patch cycle: run `mvn test`, then open `target/surefire-reports/com.thriveerp.ThriveErpApplicationTests.txt` directly (not the console output — the `.txt` report has the full, untruncated stack trace) and paste **from the first `Caused by:` onward**. That one block of text will most likely point straight at H1, H2, or H3 above rather than needing more hypothesis-generation.
 
 If you'd rather just get to green fast without the diagnostic step: apply the H1+H2/H3 fixes preemptively (they're cheap, low-risk, and correct regardless of which one is the actual cause) —
 1. Confirm `src/test/resources/application.yaml` is being picked up (or switch to an explicit `@ActiveProfiles("test")` + `application-test.yaml` to remove the ambiguity entirely).
