@@ -12,6 +12,7 @@
 
 | Date | Change | Detail |
 |---|---|---|
+| 2026-10-05 | Build fixed on Boot 4.1.1 | Added flyway + security-test starters, `@EnableWebSecurity`, 401 entry point, `V2` timestamptz migration. 37/37 tests green. See [CODE_REPORT.md](CODE_REPORT.md). |
 | 2026-09-10 | Auth slice added | User registration, login (JWT), role management. First real feature built on top of the Sprint-0 skeleton. See §3.1. |
 | 2026-09-09 | Project scaffolded | Single Spring Boot module (`com.thriveerp`), no business logic yet. Matches ARCHITECTURE.md §9 Sprint 0 item 1. |
 
@@ -22,7 +23,7 @@
 Still **one Spring Boot module** (multi-module Maven split is deferred — see ARCHITECTURE.md §9 item 1 / tech_version.md). Inside that one module, packages are laid out to mirror the hexagonal layers from ARCHITECTURE.md §2–3, so that splitting into real Maven modules later is a move, not a rewrite.
 
 ```
-src/main/java/com/thriveerp/thriveERP/
+src/main/java/com/thriveerp/
 ├── ThriveErpApplication.java        entry point (@SpringBootApplication)
 │
 ├── core/

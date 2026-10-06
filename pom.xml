@@ -62,6 +62,14 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- Spring Boot 4 moved Flyway auto-configuration out of the core
+		     autoconfigure jar; flyway-core alone no longer runs migrations
+		     at startup (-> "Schema validation: missing table [users]"). -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-flyway</artifactId>
+		</dependency>
+
 		<dependency>
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-core</artifactId>
@@ -104,6 +112,13 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Boot 4: lets @WebMvcTest slices pick up Spring Security auto-config. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 

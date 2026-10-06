@@ -2,6 +2,9 @@ package com.thriveerp.adapter.persistence.user;
 
 import com.thriveerp.core.domain.user.User;
 import com.thriveerp.core.domain.user.UserRepositoryPort;
+import com.thriveerp.core.domain.user.Role;
+import com.thriveerp.core.domain.user.exception.DuplicateUserException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -38,7 +41,15 @@ public class UserPersistenceAdapter implements UserRepositoryPort {
                         user.getId(), user.getUsername(), user.getEmail(), user.getPasswordHash(),
                         user.getRole(), user.getCreatedAt(), user.getUpdatedAt()));
 
-        return toDomain(jpaRepository.save(entity));
+        try {
+            return toDomain(jpaRepository.save(entity));
+        } catch (DataIntegrityViolationException e) {
+            // AuthService.register() checks existsByUsernameOrEmail first, but two
+            // concurrent registrations can both pass that check. The UNIQUE
+            // constraints on users are the real guard — translate the violation
+            // into the domain exception so the client gets 409, not 500.
+            throw new DuplicateUserException("Username or email already registered");
+        }
     }
 
     @Override
@@ -59,6 +70,11 @@ public class UserPersistenceAdapter implements UserRepositoryPort {
     @Override
     public boolean existsByUsernameOrEmail(String username, String email) {
         return jpaRepository.existsByUsernameOrEmail(username, email);
+    }
+
+    @Override
+    public boolean existsByRole(Role role) {
+        return jpaRepository.existsByRole(role);
     }
 
     private User toDomain(UserJpaEntity e) {

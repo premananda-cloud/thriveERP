@@ -2,18 +2,21 @@ package com.thriveerp.adapter.persistence.user;
 
 import com.thriveerp.core.domain.user.Role;
 import com.thriveerp.core.domain.user.User;
+import com.thriveerp.core.domain.user.exception.DuplicateUserException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -75,5 +78,21 @@ class UserPersistenceAdapterTest {
         assertThat(captor.getValue()).isSameAs(existingEntity);
         assertThat(captor.getValue().getRole()).isEqualTo(Role.ADMIN);
         assertThat(captor.getValue().getCreatedAt()).isEqualTo(originalCreatedAt);
+    }
+
+    @Test
+    void save_translatesUniqueConstraintViolation_intoDuplicateUserException() {
+        // The race: two concurrent registrations both pass existsByUsernameOrEmail,
+        // the second insert then violates a UNIQUE constraint. Must surface as the
+        // domain exception (-> 409), not a raw Spring DataIntegrityViolationException (-> 500).
+        UUID id = UUID.randomUUID();
+        User newUser = new User(id, "alice", "alice@example.com", "hash",
+                Role.CUSTOMER, Instant.now(), Instant.now());
+        when(jpaRepository.findById(id)).thenReturn(Optional.empty());
+        when(jpaRepository.save(any(UserJpaEntity.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate key"));
+
+        assertThatThrownBy(() -> adapter.save(newUser))
+                .isInstanceOf(DuplicateUserException.class);
     }
 }

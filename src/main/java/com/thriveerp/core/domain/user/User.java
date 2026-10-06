@@ -36,6 +36,14 @@ public class User {
         return new User(UUID.randomUUID(), username, email, passwordHash, Role.CUSTOMER, now, now);
     }
 
+    /** Factory for accounts created with a specific role (used only by the
+     *  first-admin bootstrap — normal registration always goes through
+     *  {@link #newRegistration}). */
+    public static User newWithRole(String username, String email, String passwordHash, Role role) {
+        Instant now = Instant.now();
+        return new User(UUID.randomUUID(), username, email, passwordHash, role, now, now);
+    }
+
     public void changeRole(Role newRole) {
         this.role = Objects.requireNonNull(newRole);
         this.updatedAt = Instant.now();
