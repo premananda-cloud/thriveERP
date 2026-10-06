@@ -24,3 +24,10 @@ app:
     # is blank. Set JWT_SECRET in your environment (see .env.example).
     secret: ${JWT_SECRET:}
     expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
+
+  # Optional first-admin bootstrap (see AdminBootstrapRunner). All three must be
+  # set together; leave unset to disable. Idempotent — skipped once any ADMIN exists.
+  bootstrap-admin:
+    username: ${BOOTSTRAP_ADMIN_USERNAME:}
+    email: ${BOOTSTRAP_ADMIN_EMAIL:}
+    password: ${BOOTSTRAP_ADMIN_PASSWORD:}

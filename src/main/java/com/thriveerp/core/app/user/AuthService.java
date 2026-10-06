@@ -10,6 +10,7 @@ import com.thriveerp.core.domain.user.exception.InvalidCredentialsException;
 import com.thriveerp.core.domain.user.exception.UserNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -40,6 +41,30 @@ public class AuthService {
         String hash = passwordEncoder.hash(rawPassword);
         User user = User.newRegistration(username, email, hash);
         return userRepository.save(user);
+    }
+
+    /**
+     * First-admin bootstrap. Idempotent: does nothing if any ADMIN already exists,
+     * so it is safe to run on every startup. Otherwise promotes the existing user
+     * with this username, or creates a new ADMIN account.
+     *
+     * @return the admin that was created/promoted, or empty if an ADMIN already existed
+     */
+    public Optional<User> ensureAdmin(String username, String email, String rawPassword) {
+        if (userRepository.existsByRole(Role.ADMIN)) {
+            return Optional.empty();
+        }
+        Optional<User> existing = userRepository.findByUsername(username);
+        if (existing.isPresent()) {
+            User user = existing.get();
+            user.changeRole(Role.ADMIN);
+            return Optional.of(userRepository.save(user));
+        }
+        if (userRepository.findByEmail(email).isPresent()) {
+            throw new DuplicateUserException("Bootstrap admin email already belongs to another user");
+        }
+        String hash = passwordEncoder.hash(rawPassword);
+        return Optional.of(userRepository.save(User.newWithRole(username, email, hash, Role.ADMIN)));
     }
 
     /** Returns a signed JWT on success. Deliberately vague on failure reason

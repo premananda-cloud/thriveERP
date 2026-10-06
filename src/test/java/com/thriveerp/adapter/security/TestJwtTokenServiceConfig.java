@@ -1,5 +1,7 @@
 package com.thriveerp.adapter.security;
 
+import com.thriveerp.core.domain.user.UserRepositoryPort;
+import org.mockito.Mockito;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 
@@ -10,7 +12,9 @@ import org.springframework.context.annotation.Bean;
  * context automatically, even when its controller has nothing to do with
  * security. That filter's constructor needs a JwtTokenService, which is
  * NOT auto-included (plain @Component, not a Filter/Controller/etc.), so we
- * provide one here with a fixed test-only secret.
+ * provide one here with a fixed test-only secret. The filter also needs a
+ * UserRepositoryPort (it loads the caller's current role) — a bare Mockito mock
+ * is enough, since slice tests never send a Bearer token through it.
  *
  * Deliberately does NOT also declare a JwtAuthenticationFilter @Bean — doing
  * so collides with the auto-scanned one (same bean name, BeanDefinitionOverride
@@ -22,5 +26,10 @@ public class TestJwtTokenServiceConfig {
     @Bean
     JwtTokenService jwtTokenService() {
         return new JwtTokenService("test-only-secret-value-32-bytes-minimum!", 3600);
+    }
+
+    @Bean
+    UserRepositoryPort userRepositoryPort() {
+        return Mockito.mock(UserRepositoryPort.class);
     }
 }

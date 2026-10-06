@@ -82,6 +82,7 @@ com.thriveerp
 │   └── app/user         AuthService
 └── adapter
     ├── persistence/user UserJpaEntity, UserJpaRepository, UserPersistenceAdapter
+    ├── bootstrap        AdminBootstrapRunner
     ├── security         SecurityConfig, JwtAuthenticationFilter, JwtTokenService, PasswordEncoderAdapter
     └── rest
         ├── auth         AuthController + dto/{Register,Login}Request, AuthResponse, UserResponse
@@ -106,7 +107,7 @@ com.thriveerp
 3. `TokenServicePort.issueToken` → `JwtTokenService` signs a JWT: `sub=username`, claims `userId`, `role`, `iat`, `exp` (default 3600 s).
 
 **Authenticated call**
-1. `JwtAuthenticationFilter` reads `Authorization: Bearer <jwt>`, verifies signature and expiry, and sets a `UsernamePasswordAuthenticationToken` with authority `ROLE_<role>`.
+1. `JwtAuthenticationFilter` reads `Authorization: Bearer <jwt>`, verifies signature and expiry, takes the `userId` claim, loads that user, and sets a `UsernamePasswordAuthenticationToken` with the user's **current** role from the database (`ROLE_<role>`). The token's own `role` claim is informational only. Unknown user → not authenticated.
 2. `SecurityConfig` requires authentication for everything except register/login; `@EnableMethodSecurity` enforces `hasRole('ADMIN')` on the role endpoint.
 3. Unauthenticated → `HttpStatusEntryPoint(401)`. Wrong role → Spring's access-denied handling → `403`.
 
@@ -133,18 +134,21 @@ Notable design choice: because IDs are app-assigned, Spring Data's `save()` woul
 | datasource url/user/password | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | `localhost:5432/appointment_db`, `app_user`/`secure_pass` | dev defaults only |
 | `app.jwt.secret` | `JWT_SECRET` | **none** | app refuses to start if blank or < 32 bytes |
 | `app.jwt.expiration-seconds` | `JWT_EXPIRATION_SECONDS` | 3600 | |
+| `app.bootstrap-admin.username/email/password` | `BOOTSTRAP_ADMIN_USERNAME`, `_EMAIL`, `_PASSWORD` | unset (disabled) | optional first-admin bootstrap; set all three or none; remove the password after first run |
 
 Generate a secret with `openssl rand -base64 32`. See `.env.example`.
 
 ---
 
-## 4. Tests (37)
+## 4. Tests (expected 51 after the 2026-10-06 changes; 37 verified before)
 
 | Class | Tests | Style |
 |---|---|---|
 | `UserTest` | 5 | pure unit |
-| `AuthServiceTest` | 8 | unit, ports mocked |
-| `UserPersistenceAdapterTest` | 2 | unit, Spring Data repo mocked |
+| `AdminBootstrapRunnerTest` | 4 | unit *(added 2026-10-06)* |
+| `JwtAuthenticationFilterTest` | 5 | unit *(added 2026-10-06)* |
+| `AuthServiceTest` | 12 | unit, ports mocked (+4 `ensureAdmin`) |
+| `UserPersistenceAdapterTest` | 3 | unit, Spring Data repo mocked (+1 duplicate translation) |
 | `JwtTokenServiceTest` | 7 | unit |
 | `PasswordEncoderAdapterTest` | 4 | unit |
 | `AuthControllerTest` | 6 | `@WebMvcTest` slice, security disabled |
@@ -175,11 +179,21 @@ Housekeeping: `.env.example` moved from `thriveERP-auth-module/` to the project 
 
 ## 6. Known gaps and risks
 
-Ordered roughly by importance.
+### 6.0 Resolved on 2026-10-06 (pending a local `./mvnw clean test`)
 
-1. **Duplicate registration race.** `AuthService.register` checks `existsByUsernameOrEmail` and then inserts. Two concurrent requests can both pass the check; the DB unique constraint then throws a `DataIntegrityViolationException`, which `GlobalExceptionHandler` does not map, so the client gets a `500` instead of `409`.
-2. **No first admin.** Registration always creates `CUSTOMER`, and only an `ADMIN` can change roles. The first admin must be promoted by hand (`UPDATE users SET role='ADMIN' WHERE username='…'`) or via a one-off seed migration.
-3. **Role is trusted from the token.** The JWT filter takes `role` from the claim and never re-reads the user. A demoted user keeps their old privileges until the token expires (default 1 h). There is also no token revocation, refresh or logout.
+| Former gap | Fix |
+|---|---|
+| Concurrent duplicate registration returned `500` | `UserPersistenceAdapter.save` now translates `DataIntegrityViolationException` into `DuplicateUserException` (→ `409`). The UNIQUE constraints are the real guard; the `existsBy…` pre-check stays as the fast path. |
+| No way to create the first admin | `AdminBootstrapRunner` creates (or promotes) an ADMIN at startup from `BOOTSTRAP_ADMIN_USERNAME` / `_EMAIL` / `_PASSWORD`. All-or-nothing config, password ≥ 8 chars, idempotent (skipped once any ADMIN exists). Logic lives in `AuthService.ensureAdmin`; `UserRepositoryPort` gained `existsByRole`. |
+| Role was trusted from the JWT | `JwtAuthenticationFilter` now takes only the `userId` claim from the token and loads the user's **current** role from the DB on every request. Demotions/promotions apply immediately; a deleted user's token stops working. Cost: one PK lookup per authenticated request. |
+
+### 6.1 Still open
+
+Ordered roughly by importance. (Items 1–3 from the earlier version of this list are the ones fixed above.)
+
+1. ✅ *Fixed 2026-10-06.* **Duplicate registration race.** `AuthService.register` checks `existsByUsernameOrEmail` and then inserts. Two concurrent requests can both pass the check; the DB unique constraint then throws a `DataIntegrityViolationException`, which `GlobalExceptionHandler` does not map, so the client gets a `500` instead of `409`.
+2. ✅ *Fixed 2026-10-06.* **No first admin.** Registration always creates `CUSTOMER`, and only an `ADMIN` can change roles. The first admin must be promoted by hand (`UPDATE users SET role='ADMIN' WHERE username='…'`) or via a one-off seed migration.
+3. ✅ *Fixed 2026-10-06.* **Role is trusted from the token.** The JWT filter takes `role` from the claim and never re-reads the user. A demoted user keeps their old privileges until the token expires (default 1 h). There is also no token revocation, refresh or logout.
 4. **Admin can demote themselves**, including the last admin. No guard in `changeRole`.
 5. **Email/username case sensitivity.** `Alice` and `alice` are different users; email uniqueness is case-sensitive.
 6. **No brute-force protection** on `/api/auth/login` (no rate limit or lockout).
@@ -206,8 +220,7 @@ Ordered roughly by importance.
 ## 8. Suggested next steps
 
 1. Run the app once against Postgres to verify migrations V1 + V2 (`export JWT_SECRET=$(openssl rand -base64 32); ./mvnw spring-boot:run`) and exercise register → login → role-change with `curl`.
-2. Map `DataIntegrityViolationException` → `409` (gap 1) and add a test.
-3. Decide the first-admin story (gap 2): seed migration vs. a one-time bootstrap property.
+2. ~~Map duplicate-key violations to 409~~ and ~~first-admin story~~: done 2026-10-06.
 4. Add `Dockerfile` + `docker-compose.yml` (ARCHITECTURE.md §7) so the stack starts with one command.
 5. Start the appointment slice using the same four-layer shape (`core/domain/appointment`, `core/app/appointment`, `adapter/persistence/appointment`, `adapter/rest/appointment`), then `EngineConnectorPort` with the mock adapter.
 6. Update `CODE_STRUCTURE.md` and `tech_version.md` from this report.

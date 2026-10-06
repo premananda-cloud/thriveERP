@@ -156,4 +156,61 @@ class AuthServiceTest {
 
         verify(userRepository, never()).save(any());
     }
+
+    // ---- ensureAdmin (first-admin bootstrap) ----
+
+    @Test
+    void ensureAdmin_doesNothing_whenAnAdminAlreadyExists() {
+        when(userRepository.existsByRole(Role.ADMIN)).thenReturn(true);
+
+        Optional<User> result = authService.ensureAdmin("root", "root@example.com", "password123");
+
+        assertThat(result).isEmpty();
+        verify(userRepository, never()).save(any());
+        verifyNoInteractions(passwordEncoder);
+    }
+
+    @Test
+    void ensureAdmin_createsAdminAccount_whenNoAdminExistsAndUsernameIsFree() {
+        when(userRepository.existsByRole(Role.ADMIN)).thenReturn(false);
+        when(userRepository.findByUsername("root")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("root@example.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.hash("password123")).thenReturn("hashed-value");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        User result = authService.ensureAdmin("root", "root@example.com", "password123").orElseThrow();
+
+        assertThat(result.getRole()).isEqualTo(Role.ADMIN);
+        assertThat(result.getUsername()).isEqualTo("root");
+        assertThat(result.getPasswordHash()).isEqualTo("hashed-value");
+    }
+
+    @Test
+    void ensureAdmin_promotesExistingUser_whenUsernameAlreadyRegistered() {
+        User existing = new User(UUID.randomUUID(), "root", "root@example.com", "old-hash",
+                Role.CUSTOMER, Instant.now(), Instant.now());
+        when(userRepository.existsByRole(Role.ADMIN)).thenReturn(false);
+        when(userRepository.findByUsername("root")).thenReturn(Optional.of(existing));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        User result = authService.ensureAdmin("root", "root@example.com", "ignored-password").orElseThrow();
+
+        assertThat(result.getRole()).isEqualTo(Role.ADMIN);
+        assertThat(result.getPasswordHash()).isEqualTo("old-hash"); // password untouched
+        verifyNoInteractions(passwordEncoder);
+    }
+
+    @Test
+    void ensureAdmin_throwsDuplicateUserException_whenEmailBelongsToAnotherUser() {
+        User other = new User(UUID.randomUUID(), "someone", "root@example.com", "hash",
+                Role.CUSTOMER, Instant.now(), Instant.now());
+        when(userRepository.existsByRole(Role.ADMIN)).thenReturn(false);
+        when(userRepository.findByUsername("root")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("root@example.com")).thenReturn(Optional.of(other));
+
+        assertThatThrownBy(() -> authService.ensureAdmin("root", "root@example.com", "password123"))
+                .isInstanceOf(DuplicateUserException.class);
+
+        verify(userRepository, never()).save(any());
+    }
 }
